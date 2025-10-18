@@ -63,40 +63,30 @@ class FileHandler:
     def check_answers(exercise_file, answer_file, grade_path="Grade.txt"):
         """校验答案，生成评分结果到Grade.txt"""
         try:
-            # 读取题目和答案
             exercises = FileHandler.read_file(exercise_file)
             answers = FileHandler.read_file(answer_file)
 
             if len(exercises) != len(answers):
                 raise ValueError(f"题目数量({len(exercises)})与答案数量({len(answers)})不匹配")
 
-            correct = []
-            wrong = []
+            correct, wrong = [], []
 
             for idx, (exercise, answer) in enumerate(zip(exercises, answers), 1):
                 try:
-                    # 提取表达式
                     expr = re.sub(r"\s*=\s*$", "", exercise).strip()
-                    # 规范化运算符
                     expr = expr.replace('*', '×').replace('/', '÷')
 
-                    # 计算正确答案
-                    correct_answer = str(Calculator.calculate(expr))
-
-                    # 对比答案
+                    correct_answer = str(Calculator.calculate(expr)).strip()
                     if correct_answer == answer.strip():
                         correct.append(str(idx))
                     else:
                         wrong.append(str(idx))
-                except Exception as e:
-                    # 计算错误，题目归为错误
+                except Exception:
                     wrong.append(str(idx))
 
-            # 生成评分结果
             correct_str = f"Correct: {len(correct)} ({', '.join(correct)})" if correct else "Correct: 0"
             wrong_str = f"Wrong: {len(wrong)} ({', '.join(wrong)})" if wrong else "Wrong: 0"
 
-            # 写入Grade.txt
             with open(grade_path, 'w', encoding='utf-8') as f:
                 f.write(correct_str + '\n' + wrong_str)
 
@@ -104,4 +94,3 @@ class FileHandler:
 
         except Exception as e:
             raise ValueError(f"答案检查失败: {e}")
-
