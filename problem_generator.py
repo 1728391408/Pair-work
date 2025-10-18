@@ -98,7 +98,7 @@ class ProblemGenerator:
         while attempts < max_attempts:
             # 随机1-3个运算符
             op_count = random.randint(1, 3)
-            expr = self._generate_expression_optimized(op_count)
+            expr = self._generate_expression_with_smart_parentheses(op_count)
 
             # 校验所有数值都在范围内
             if not self._check_all_numbers_in_range(expr):
@@ -127,22 +127,88 @@ class ProblemGenerator:
                 return False
         return True
 
-    def _generate_expression_optimized(self, op_count):
-        """优化表达式生成"""
-        parts = [random.choice(self.number_pool)]
-
-        for i in range(op_count):
+    def _generate_expression_with_smart_parentheses(self, op_count):
+        """生成带智能括号的表达式"""
+        if op_count == 1:
+            # 单运算符不需要括号
+            num1 = random.choice(self.number_pool)
             op = random.choice(self.operators)
-            num = random.choice(self.number_pool)
+            num2 = random.choice(self.number_pool)
+            return f"{num1} {op} {num2}"
 
-            # 简化括号逻辑
-            if i > 0 and random.random() < 0.3:
-                parts[-1] = f"({parts[-1]})"
+        # 多运算符情况
+        parts = []
+        operators_used = []
 
-            parts.append(op)
-            parts.append(num)
+        # 生成基础表达式（无括号）
+        for i in range(op_count + 1):
+            parts.append(random.choice(self.number_pool))
+            if i < op_count:
+                op = random.choice(self.operators)
+                parts.append(op)
+                operators_used.append(op)
 
-        return ' '.join(parts)
+        expr = ' '.join(parts)
+
+        # 智能添加括号：只在需要改变运算顺序时添加
+        if op_count >= 2:
+            expr = self._add_parentheses_smartly(expr, operators_used)
+
+        return expr
+
+    def _add_parentheses_smartly(self, expr, operators_used):
+        """智能添加括号：只在需要改变运算顺序时添加"""
+        parts = expr.split()
+
+        # 检查是否需要括号的情况：
+        # 1. 当乘除运算在加减运算之前，但需要先算后面的加减时
+        # 2. 随机决定是否添加括号来创建多样性
+
+        high_priority_ops = ['×', '÷']
+        low_priority_ops = ['+', '-']
+
+        # 情况1：需要先算后面的加减法
+        for i in range(1, len(parts) - 2, 2):
+            if parts[i] in high_priority_ops:
+                # 检查后面是否有低优先级运算
+                for j in range(i + 2, len(parts) - 1, 2):
+                    if parts[j] in low_priority_ops:
+                        # 随机决定是否添加括号（30%概率）
+                        if random.random() < 0.3:
+                            # 给后面的低优先级运算加括号
+                            parts[j - 1] = f"({parts[j - 1]}"
+                            # 找到这个子表达式的结束
+                            k = j + 1
+                            while k < len(parts) and parts[k] in low_priority_ops:
+                                k += 2
+                            parts[k - 1] = f"{parts[k - 1]})"
+                            return ' '.join(parts)
+
+        # 情况2：需要先算前面的加减法（当后面是乘除时）
+        for i in range(1, len(parts) - 2, 2):
+            if parts[i] in low_priority_ops:
+                # 检查后面是否有高优先级运算
+                for j in range(i + 2, len(parts) - 1, 2):
+                    if parts[j] in high_priority_ops:
+                        # 随机决定是否添加括号（40%概率）
+                        if random.random() < 0.4:
+                            # 给前面的低优先级运算加括号
+                            parts[i - 1] = f"({parts[i - 1]}"
+                            parts[i + 1] = f"{parts[i + 1]})"
+                            return ' '.join(parts)
+
+        # 情况3：连续相同优先级的运算，随机决定是否加括号改变顺序
+        if len(parts) >= 5 and random.random() < 0.2:  # 20%概率
+            # 找到连续相同优先级的运算符
+            for i in range(1, len(parts) - 3, 2):
+                if ((parts[i] in high_priority_ops and parts[i + 2] in high_priority_ops) or
+                        (parts[i] in low_priority_ops and parts[i + 2] in low_priority_ops)):
+                    # 给后面的运算加括号
+                    parts[i + 1] = f"({parts[i + 1]}"
+                    parts[i + 3] = f"{parts[i + 3]})"
+                    return ' '.join(parts)
+
+        return expr
 
     def _is_valid_fast(self, expr):
         """快速校验表达式合法性"""
