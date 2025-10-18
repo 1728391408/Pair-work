@@ -1,7 +1,8 @@
 from arg_parser import ArgParser
 from problem_generator import ProblemGenerator
-from file_handler import FileHandler
 from calculator import Calculator
+from fraction import Fraction
+from file_handler import FileHandler
 
 
 def main():
@@ -10,6 +11,10 @@ def main():
         arg_parser = ArgParser()
         params = arg_parser.parse()
 
+        # 清空缓存
+        Calculator.clear_cache()
+        Fraction.clear_cache()
+
         if params['type'] == 'generate':
             # 生成题目模式
             problem_count = params['problem_count']
@@ -17,15 +22,19 @@ def main():
 
             print(f"正在生成{problem_count}道{num_range}以内的题目...")
             generator = ProblemGenerator(num_range)
-            problems = []
-            answers = []
 
-            for _ in range(problem_count):
-                problem = generator.generate_single_problem()
-                problems.append(problem)
-                # 计算答案
-                import re
-                expr = re.sub(r"\s*=\s*$", "", problem).strip()
+            # 使用批量生成优化性能
+            if problem_count > 50:
+                problems = generator.generate_batch(problem_count)
+            else:
+                problems = []
+                for _ in range(problem_count):
+                    problems.append(generator.generate_single_problem())
+
+            # 计算答案
+            answers = []
+            for problem in problems:
+                expr = problem.replace(" = ", "").strip()
                 answer = str(Calculator.calculate(expr))
                 answers.append(answer)
 
