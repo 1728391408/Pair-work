@@ -3,14 +3,38 @@ from fraction import Fraction
 
 
 class Calculator:
+    # 添加表达式结果缓存
+    _calc_cache = {}
+
     @staticmethod
     def calculate(expr):
-        """计算表达式结果，处理括号优先级"""
+        """计算表达式结果，处理括号优先级（带缓存）"""
         expr = expr.replace(" ", "")  # 移除空格
+
+        # 检查缓存
+        if expr in Calculator._calc_cache:
+            return Calculator._calc_cache[expr]
+
         try:
-            return Calculator._eval_recursive(expr)
+            result = Calculator._eval_recursive(expr)
+            Calculator._calc_cache[expr] = result
+            return result
         except Exception as e:
             raise ValueError(f"表达式计算失败: {str(e)}")
+
+    @staticmethod
+    def calculate_cached(expr):
+        """专门用于校验的快速计算（不抛详细异常）"""
+        expr_clean = expr.replace(" ", "")
+        if expr_clean in Calculator._calc_cache:
+            return Calculator._calc_cache[expr_clean]
+
+        try:
+            result = Calculator._eval_recursive(expr_clean)
+            Calculator._calc_cache[expr_clean] = result
+            return result
+        except:
+            raise ValueError("无效表达式")
 
     @staticmethod
     def _eval_recursive(expr):
@@ -56,3 +80,8 @@ class Calculator:
 
         # 单一数值
         return Fraction.from_str(expr)
+
+    @staticmethod
+    def clear_cache():
+        """清空计算缓存"""
+        Calculator._calc_cache.clear()
